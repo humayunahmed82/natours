@@ -2,7 +2,15 @@
   "extends": ["airbnb", "prettier", "plugin:node/recommended"],
   "plugins": ["prettier"],
   "rules": {
-    "prettier/prettier": "error",
+    "prettier/prettier": [
+      "error",
+      {},
+      {
+        "fileInfoOptions": {
+          "withNodeModules": true
+        }
+      }
+    ],
     "spaced-comment": "off",
     "no-console": "warn",
     "consistent-return": "off",
@@ -21,6 +29,7 @@
       {
         "devDependencies": false
       }
-    ]
+    ],
+    "node/no-unsupported-features/es-syntax": "off"
   }
 }
