@@ -1,5 +1,13 @@
 import mongoose from "mongoose";
 import "dotenv/config";
+
+process.on("uncaughtException", (err) => {
+  console.log("UNCAUGHT EXCEPTION! 🔥🔥 Shutting down...");
+  console.log(err.name, err.message);
+
+  process.exit(1);
+});
+
 import { app } from "./app.js";
 
 const port = process.env.PORT || 8000;
@@ -13,8 +21,17 @@ mongoose
   .connect(DB)
   .then(() => console.log("Database connection successfully!"));
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`Example app listening on port 127.0.0.1:${port}`);
 });
 
-// 105 - Document Middleware
+process.on("unhandledRejection", (err) => {
+  console.log("UNHANDLED REJECTION! 🔥🔥 Shutting down...");
+  console.log(err.name, err.message);
+
+  server.close(() => {
+    process.exit(1);
+  });
+});
+
+// 121 - Handling Mongoose Validation Errors
