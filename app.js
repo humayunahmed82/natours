@@ -1,5 +1,10 @@
 import express from "express";
 import morgan from "morgan";
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
+import mongoSanitize from "express-mongo-sanitize";
+import xss from "xss-clean";
+import hpp from "hpp";
 
 import tourRouter from "./routers/tourRouters.js";
 import userRouter from "./routers/userRouters.js";
@@ -14,24 +19,59 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// 1) Middleware
+// 1) Global Middleware
+// Set Security HTTP Headers
+app.use(helmet());
+
+// Development logging
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("tiny"));
 }
-app.use(express.json());
+
+// Limit requests from same API
+const limiter = rateLimit({
+  max: 100,
+  windowMs: 60 * 60 * 1000, // 1 hour
+  message: "Too many requests from this IP, please try again in an hour!",
+});
+
+app.use("/api", limiter);
+
+// Body parser, reading data from body into req.body
+app.use(express.json({ limit: "10kb" })); // limit the size of the body to 10kb}));
+
+// Data sanitization against NoSQL query injection
+app.use(mongoSanitize());
+
+// Data sanitization against XSS
+app.use(xss());
+
+// Prevent parameter pollution
+app.use(
+  hpp({
+    whitelist: [
+      "duration",
+      "ratingsQuantity",
+      "ratingsAverage",
+      "maxGroupSize",
+      "difficulty",
+      "price",
+    ], // allow only this parameter to be duplicated
+    // remove all other duplicated parameters
+  }),
+);
+
+// serving static files
 app.use(express.static(`${__dirname}/public`));
 
-app.use((req, res, next) => {
-  console.log("Hello form the middleware 🙋‍♂️");
-  next();
-});
-
+// text middleware
 app.use((req, res, next) => {
   req.requestTitme = new Date().toISOString();
+
+  // console.log(req.headers);
+
   next();
 });
-
-console.log("X");
 
 // 2) Route Handler
 app.use("/api/v1/tours", tourRouter);
