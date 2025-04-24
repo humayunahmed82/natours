@@ -95,5 +95,3 @@ app.all("*", (req, res, next) => {
 app.use(globalErrorHendler);
 
 export { app };
-
-// 171 - Geospatial Queries Finding Tours Within Radius
