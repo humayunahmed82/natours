@@ -116,8 +116,9 @@ const protect = catchAsync(async (req, res, next) => {
   next();
 });
 
-const restrictTo = (...roles) => {
-  return (req, res, next) => {
+const restrictTo =
+  (...roles) =>
+  (req, res, next) => {
     if (!roles.includes(req.user.role)) {
       return next(
         new AppError(
@@ -126,10 +127,8 @@ const restrictTo = (...roles) => {
         ),
       );
     }
-
     next();
   };
-};
 
 const forgotPassword = catchAsync(async (req, res, next) => {
   //1) Get user based on POSTED Email

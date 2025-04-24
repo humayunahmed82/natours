@@ -33,5 +33,3 @@ process.on("unhandledRejection", (err) => {
     process.exit(1);
   });
 });
-
-// 140 - Deleting the Current User

@@ -8,6 +8,7 @@ import hpp from "hpp";
 
 import tourRouter from "./routers/tourRouters.js";
 import userRouter from "./routers/userRouters.js";
+import reviewRouter from "./routers/reviewRouters.js";
 import AppError from "./utils/appError.js";
 import globalErrorHendler from "./controllers/errorControllers.js";
 
@@ -76,6 +77,7 @@ app.use((req, res, next) => {
 // 2) Route Handler
 app.use("/api/v1/tours", tourRouter);
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/reviews", reviewRouter);
 
 app.all("*", (req, res, next) => {
   // res.status(404).json({
@@ -93,3 +95,5 @@ app.all("*", (req, res, next) => {
 app.use(globalErrorHendler);
 
 export { app };
+
+// 171 - Geospatial Queries Finding Tours Within Radius

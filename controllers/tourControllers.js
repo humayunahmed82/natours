@@ -1,7 +1,14 @@
 import Tour from "../models/tourModel.js";
-import APIFeatures from "../utils/apiFeatures.js";
 import AppError from "../utils/appError.js";
 import catchAsync from "../utils/catchAsync.js";
+
+import {
+  createOne,
+  deleteOne,
+  getAll,
+  getOne,
+  updateOne,
+} from "./handlerFactory.js";
 
 const aliasing = (req, res, next) => {
   req.query.limit = "5";
@@ -10,81 +17,22 @@ const aliasing = (req, res, next) => {
   next();
 };
 
-const getAllTours = catchAsync(async (req, res, next) => {
-  // EXECUTE QUERY
-  const features = new APIFeatures(Tour.find(), req.query)
-    .filter()
-    .sort()
-    .limitingField()
-    .pagination();
-  const tours = await features.query;
+// get all tours
+const getAllTours = getAll(Tour);
 
-  res.status(200).json({
-    status: "success",
-    results: tours.length,
-    data: {
-      tours,
-    },
-  });
-});
+// Get a single tour
+const getTour = getOne(Tour, { path: "reviews" });
 
-const getTour = catchAsync(async (req, res, next) => {
-  const tour = await Tour.findById(req.params.id);
+// Create a new tour
+const createTour = createOne(Tour);
 
-  if (!tour) {
-    return next(new AppError("No tour found with that ID", 404));
-  }
+// Update a tour
+const updateTour = updateOne(Tour);
 
-  res.status(200).json({
-    status: "success",
-    data: {
-      tour,
-    },
-  });
-});
+// Delete a tour
+const deleteTour = deleteOne(Tour);
 
-const createTour = catchAsync(async (req, res, next) => {
-  const newTour = await Tour.create(req.body);
-
-  res.status(201).json({
-    status: "success",
-    data: {
-      tour: newTour,
-    },
-  });
-});
-
-const updateTour = catchAsync(async (req, res, next) => {
-  const tour = await Tour.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  });
-
-  if (!tour) {
-    return next(new AppError("No tour found with that ID", 404));
-  }
-
-  res.status(200).json({
-    status: "success",
-    data: {
-      tour,
-    },
-  });
-});
-
-const deleteTour = catchAsync(async (req, res, next) => {
-  const tour = await Tour.findByIdAndDelete(req.params.id);
-
-  if (!tour) {
-    return next(new AppError("No tour found with that ID", 404));
-  }
-
-  res.status(204).json({
-    status: "success",
-    data: null,
-  });
-});
-
+// get Tour stats
 const getTourStats = catchAsync(async (req, res, next) => {
   const stats = await Tour.aggregate([
     {
@@ -117,6 +65,7 @@ const getTourStats = catchAsync(async (req, res, next) => {
   });
 });
 
+// Get Monthly Plan
 const getMonthlyPlan = catchAsync(async (req, res, next) => {
   const year = req.params.year;
 
@@ -161,6 +110,76 @@ const getMonthlyPlan = catchAsync(async (req, res, next) => {
   });
 });
 
+const getWithIn = catchAsync(async (req, res, next) => {
+  const { distance, latlng, unit } = req.params;
+  const [lat, lan] = latlng.split(",");
+
+  const radius = unit === "mi" ? distance / 3963.2 : distance / 6378.1;
+
+  if (!lat || !lan) {
+    next(
+      new AppError(
+        "Please provide lattutr and langitude in the format lat,lan",
+        400,
+      ),
+    );
+  }
+
+  const tours = await Tour.find({
+    startLocation: { $geoWithin: { $centerSphere: [[lan, lat], radius] } },
+  });
+
+  res.status(200).json({
+    status: "success",
+    result: tours.length,
+    data: {
+      data: tours,
+    },
+  });
+});
+
+const getDistances = catchAsync(async (req, res, next) => {
+  const { latlng, unit } = req.params;
+  const [lat, lan] = latlng.split(",");
+
+  if (!lat || !lan) {
+    next(
+      new AppError(
+        "Please provide lattutr and langitude in the format lat,lan",
+        400,
+      ),
+    );
+  }
+
+  const multiplier = unit === "mi" ? 0.000621371 : 0.001;
+
+  const distances = await Tour.aggregate([
+    {
+      $geoNear: {
+        near: {
+          type: "Point",
+          coordinates: [lan * 1, lat * 1],
+        },
+        distanceField: "distance",
+        distanceMultiplier: multiplier,
+      },
+    },
+    {
+      $project: {
+        distance: 1,
+        name: 1,
+      },
+    },
+  ]);
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      data: distances,
+    },
+  });
+});
+
 export {
   getAllTours,
   getTour,
@@ -170,4 +189,6 @@ export {
   aliasing,
   getTourStats,
   getMonthlyPlan,
+  getWithIn,
+  getDistances,
 };

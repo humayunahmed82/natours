@@ -1,5 +1,7 @@
-import mongoose from "mongoose";
+import mongoose, { set } from "mongoose";
 import slugify from "slugify";
+
+// import User from "./userModel.js";
 // import validator from "validator";
 
 const tourSchema = new mongoose.Schema(
@@ -27,7 +29,7 @@ const tourSchema = new mongoose.Schema(
       required: [true, "A tour must have a difficulty"],
       trim: true,
       enum: {
-        values: ["easy", "medium", "defficult"],
+        values: ["easy", "medium", "difficult"],
         message: "Difficulty is either: easy, medium, difficult",
       },
     },
@@ -36,6 +38,7 @@ const tourSchema = new mongoose.Schema(
       default: 4.5,
       min: [1, "Rating must be above 1.0"],
       max: [5, "Rating must be below 5.0"],
+      set: (val) => Math.round(val * 10) / 10,
     },
     ratingsQuantity: {
       type: Number,
@@ -76,6 +79,36 @@ const tourSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    startLocation: {
+      // GeoJSON
+      type: {
+        type: String,
+        default: "Point",
+        enum: ["Point"],
+      },
+      coordinates: [Number],
+      address: String,
+      description: String,
+    },
+    locations: [
+      {
+        type: {
+          type: String,
+          default: "Point",
+          enum: ["Point"],
+        },
+        coordinates: [Number],
+        address: String,
+        description: String,
+        day: Number,
+      },
+    ],
+    guides: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: "User",
+      },
+    ],
   },
   {
     timestamps: true,
@@ -84,8 +117,20 @@ const tourSchema = new mongoose.Schema(
   },
 );
 
+// Indexing
+tourSchema.index({ price: 1, ratingsAverage: -1 });
+tourSchema.index({ slug: 1 });
+tourSchema.index({ startLocation: "2dsphere" });
+
 tourSchema.virtual("durationWeeks").get(function () {
   return this.duration / 7;
+});
+
+// Virtual populate
+tourSchema.virtual("reviews", {
+  ref: "Review",
+  foreignField: "tour",
+  localField: "_id",
 });
 
 // DOCUMEN MEDELLWARE: Run before .save() and create()
@@ -93,6 +138,14 @@ tourSchema.pre("save", function (next) {
   this.slug = slugify(this.name, { lower: true });
   next();
 });
+
+// tourSchema.pre("save", async function (next) {
+//   const guidesPromises = this.guides.map(async (id) => await User.findById(id));
+
+//   this.guides = await Promise.all(guidesPromises);
+
+//   next();
+// });
 
 // tourSchema.pre("save", function (next) {
 //   console.log("Will save document...");
@@ -112,26 +165,27 @@ tourSchema.pre(/^find/, function (next) {
   next();
 });
 
+tourSchema.pre(/^find/, function (next) {
+  this.populate({
+    path: "guides",
+    select: "-__v -passwordChangeAt -createdAt -updatedAt",
+  });
+
+  next();
+});
+
 tourSchema.post(/^find/, (docs, next) => {
   console.log(`query took  milliseconds`);
   next();
 });
 
 // AGGREGATETION MIDDLEWARE
-tourSchema.pre("aggregate", function (next) {
-  this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
-  console.log(this);
-  next();
-});
+// tourSchema.pre("aggregate", function (next) {
+//   this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
+//   console.log(this);
+//   next();
+// });
 
 const Tour = mongoose.model("Tour", tourSchema);
 
 export default Tour;
-
-// romeldhaka@gmail.com
-// Dh@k@Dh@k@
-
-// $2a$08$bAW3lzgdk7tx1F3y7rt8X.f1IggsNbU..lMcktHwl5cRB/lkI4iOG
-
-// crm_user
-// n736raOVmO8RHSyI

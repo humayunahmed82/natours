@@ -1,6 +1,7 @@
 import User from "../models/userModel.js";
 import AppError from "../utils/appError.js";
 import catchAsync from "../utils/catchAsync.js";
+import { deleteOne, getAll, getOne, updateOne } from "./handlerFactory.js";
 
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};
@@ -12,18 +13,13 @@ const filterObj = (obj, ...allowedFields) => {
   return newObj;
 };
 
-const getAllUsers = catchAsync(async (req, res, next) => {
-  const users = await User.find();
+// This function is for get user logged in users.
+const getMe = (req, res, next) => {
+  req.params.id = req.user.id;
+  next();
+};
 
-  res.status(200).json({
-    status: "success",
-    results: users.length,
-    data: {
-      users,
-    },
-  });
-});
-
+// This function is for updating logged in users.
 const updateMe = catchAsync(async (req, res, next) => {
   // 1) create error if user Posts password data
   if (req.body.password || req.body.passwordConfirm) {
@@ -52,6 +48,7 @@ const updateMe = catchAsync(async (req, res, next) => {
   });
 });
 
+// This function is for deleting logged in users.
 const deleteMe = catchAsync(async (req, res, next) => {
   // 1) User is not deleted from the database
   await User.findByIdAndUpdate(req.user.id, { active: false });
@@ -63,37 +60,33 @@ const deleteMe = catchAsync(async (req, res, next) => {
   });
 });
 
-const createUser = (req, res) => {
+// Create a New user
+const createUser = catchAsync(async (req, res, next) => {
   res.status(500).json({
-    status: "success",
-    message: "This route is not yet difined",
+    status: "Error",
+    message: "This ropute is not defined. Please use /signup instead",
   });
-};
-const getUser = (req, res) => {
-  res.status(500).json({
-    status: "success",
-    message: "This route is not yet difined",
-  });
-};
-const updateUser = (req, res) => {
-  res.status(500).json({
-    status: "success",
-    message: "This route is not yet difined",
-  });
-};
-const deleteUser = (req, res) => {
-  res.status(500).json({
-    status: "success",
-    message: "This route is not yet difined",
-  });
-};
+});
+
+// get All Users
+const getAllUsers = getAll(User);
+
+// Get a Single user
+const getUser = getOne(User);
+
+// Update user
+const updateUser = updateOne(User);
+
+// Delete user
+const deleteUser = deleteOne(User);
 
 export {
+  getMe,
   getAllUsers,
   updateMe,
-  createUser,
   getUser,
   updateUser,
   deleteUser,
   deleteMe,
+  createUser,
 };
